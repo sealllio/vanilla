@@ -234,6 +234,10 @@ int vpi_decode_init(vpi_decode_state_t *s)
 		}
 		vpilog("Decoding: Software\n");
 		codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+
+        if (!strcmp(codec->name, "h264_nvv4l2")) {  // currently not working
+            codec = avcodec_find_decoder_by_name("h264");
+        }
 		get_format = 0;
 	}
 
