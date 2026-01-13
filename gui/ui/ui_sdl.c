@@ -163,6 +163,10 @@ void find_valid_controller(vui_sdl_context_t *sdl_ctx)
     //       and then use the direct hardware access JUST for the gyros.
     int controller = -1;
     int steam_virtual_gamepad_index = -1;
+    // order of joycon controllers can change - need to keep track of combined joycons index
+    int joycon_combined_index = -1;
+    // only bluetooth joycon controllers support gyro, so we'll use one (if available)
+    int joycon_IMU_index = -1;
 
 	vpilog("Looking for game controllers...\n");
 	for (int i = 0; i < SDL_NumJoysticks(); i++) {
@@ -173,7 +177,23 @@ void find_valid_controller(vui_sdl_context_t *sdl_ctx)
         } else if (controller == -1) {
             controller = i;
         }
+        
+        if (ctrl_name != NULL && !strcmp(ctrl_name, "Nintendo Switch Joy-Con (L/R)")){
+            joycon_combined_index = i;
+        }
+        else if (ctrl_name != NULL && strlen(ctrl_name) >= 27) {
+            char *name_end = (char *)ctrl_name + strlen(ctrl_name) - 11;
+            if (!strcmp(name_end, "Joy-Con (L)") || !strcmp(name_end, "Joy-Con (R)")){
+                joycon_IMU_index = i;
+            }
+        }
 	}
+
+    if (joycon_combined_index != -1 && joycon_IMU_index != -1) { 
+        controller = joycon_combined_index; 
+    } else {
+        joycon_IMU_index = -1;
+    }
 
     SDL_GameController *steam_virtual_gamepad = NULL;
     SDL_GameController *c = NULL;
@@ -199,10 +219,25 @@ void find_valid_controller(vui_sdl_context_t *sdl_ctx)
         }
     }
 
+    SDL_GameController *joycon_IMU = NULL;
+    if (joycon_IMU_index != -1) {
+        joycon_IMU = SDL_GameControllerOpen(joycon_IMU_index);
+        if (joycon_IMU) {
+            const char *IMU_joycon_name = SDL_GameControllerName(joycon_IMU);
+            SDL_GameControllerSetSensorEnabled(joycon_IMU, SDL_SENSOR_ACCEL, 1);
+            SDL_GameControllerSetSensorEnabled(joycon_IMU, SDL_SENSOR_GYRO, 1);
+            vpilog("  with \"%s\" for accelerometer/gyroscope\n", IMU_joycon_name);
+        }
+    }
+
     if (steam_virtual_gamepad) {
         sdl_ctx->controller = steam_virtual_gamepad;
         sdl_ctx->controller_gyros = c;
-    } else {
+    } else if (joycon_IMU) {
+        sdl_ctx->controller = c;
+        sdl_ctx->controller_gyros = joycon_IMU;
+    }
+    else {
         sdl_ctx->controller = c;
     }
 }
