@@ -31,6 +31,7 @@
 #include "platform.h"
 #include "ui_priv.h"
 #include "ui_util.h"
+#include "non_sdl/iio_device.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define PW_CHAR_SIZE 20
@@ -174,7 +175,7 @@ void find_valid_controller(vui_sdl_context_t *sdl_ctx)
             controller = i;
         }
 	}
-
+    
     SDL_GameController *steam_virtual_gamepad = NULL;
     SDL_GameController *c = NULL;
     if (steam_virtual_gamepad_index != -1) {
@@ -359,6 +360,8 @@ int vui_sdl_event_thread(void *data)
 {
     vui_context_t *vui = (vui_context_t *) data;
     vui_sdl_context_t *sdl_ctx = (vui_sdl_context_t *) vui->platform_data;
+
+    init_iio_devices();
 
     SDL_Event ev;
     // while (!vui->quit) {

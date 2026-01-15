@@ -269,6 +269,8 @@ list(APPEND VANILLA_GUI_SRC
     ui/ui_sdl.c
     ui/ui_util.c
     ui/ui_util.h
+    ui/non_sdl/iio_device.c
+    ui/non_sdl/iio_device.h
 )
 
 if (LINUX)
@@ -311,6 +313,9 @@ else()
 	install(TARGETS vanilla)
 endif()
 
+find_library(LIBIIO_LIBRARIES iio)
+find_path(LIBIIO_INCLUDE_DIRS iio.h)
+
 # Find packages (unless using vendored build)
 if (NOT VANILLA_BUILD_VENDORED)
     find_package(SDL2 REQUIRED)
@@ -324,6 +329,7 @@ target_link_libraries(vanilla PRIVATE
     SDL2_ttf
     SDL2_image
     libvanilla
+    iio
     m
 )
 
