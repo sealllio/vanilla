@@ -6,20 +6,25 @@
 #include <iio.h>
 #include <stdint.h>
 #include <SDL2/SDL.h>
+#include <unistd.h>
 
 
-bool init_iio_devices() {
+struct IIO_Sensors init_iio_devices() {
 	struct iio_context* iio_ctx = iio_create_default_context();
 	struct iio_device* gyro = iio_context_find_device(iio_ctx, "(null)_gyro");
 	struct iio_device* accel = iio_context_find_device(iio_ctx, "(null)_accel");
 
-	if (gyro) {
-		push_single_sensor_event(SDL_SENSOR_GYRO, gyro);
-		// io_device_get_channels_count()
-	}
-	if (accel) {
-		push_single_sensor_event(SDL_SENSOR_ACCEL, accel);
-	}
+	struct IIO_Sensors sensors;
+	sensors.gyro = gyro;
+	sensors.accel = accel;
+	return sensors;
+}
+
+void* iio_thread_loop(void *v_sensors){
+	struct IIO_Sensors *sensors = (struct IIO_Sensors *)v_sensors;
+	push_single_sensor_event(SDL_SENSOR_GYRO, sensors->gyro, 100);
+	push_single_sensor_event(SDL_SENSOR_ACCEL, sensors->accel, 1);
+	sleep(1);
 }
 
 
@@ -40,7 +45,7 @@ void push_sensor_event(SDL_SensorType sensor, float data[3], uint64_t timestamp)
 // switch gyro and accel has 4 channels: 3 data, then timestamp
 // data attributes: raw, scale, scale, scale_available
 // current_timestamp_clock, mount_matrix, sampling_frequency, sampling_frequency_available
-void push_single_sensor_event(SDL_SensorType sensor, struct iio_device *dev){
+void push_single_sensor_event(SDL_SensorType sensor, struct iio_device *dev, int modifier){
 	float data[3];
 	struct iio_channel* channel;
 	// data is le:S16/16>>0, so should be enough?
@@ -50,9 +55,31 @@ void push_single_sensor_event(SDL_SensorType sensor, struct iio_device *dev){
 		channel = iio_device_get_channel(dev, i);
 		iio_channel_attr_read(channel, "raw", value_string, 10);
 		iio_channel_attr_read(channel, "scale", scale_string, 10);
-		data[i] = strtof(value_string, NULL) * strtof(scale_string, NULL);
+		data[i] = modifier * strtof(value_string, NULL) * strtof(scale_string, NULL);
 	}
 
+	/**
+	#define JC_IMU_MAX_ACCEL_MAG		32767
+#define JC_IMU_ACCEL_RES_PER_G		4096
+#define JC_IMU_ACCEL_FUZZ		10
+#define JC_IMU_ACCEL_FLAT		0
+
+#define JC_IMU_PREC_RANGE_SCALE	1000
+#define JC_IMU_MAX_GYRO_MAG		32767000 
+#define JC_IMU_GYRO_RES_PER_DPS		14247 
+#define JC_IMU_GYRO_FUZZ		10
+#define JC_IMU_GYRO_FLAT		0
+
+JC_IMU_PREC_RANGE_SCALE *
+				      (imu_data[i].gyro_x)),
+				     ctlr->gyro_cal.scale[0],
+				     ctlr->imu_cal_gyro_divisor[0]);
+
+					 (s32)imu_data[i].accel_x *
+			    ctlr->accel_cal.scale[0]) /
+			    ctlr->imu_cal_accel_divisor[0]
+
+*/
 	// channel = iio_device_get_channel(dev, 3);
 	// char scale_string[10];
 	// iio_channel_attr_read(channel, "I don't understand timestamp", scale_string, 10);

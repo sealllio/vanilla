@@ -65,6 +65,7 @@ typedef struct {
     SDL_AudioDeviceID mic;
     SDL_GameController *controller;
     SDL_GameController *controller_gyros;
+    struct IIO_Sensors iio_gyros;
     SDL_Texture *game_tex;
     int last_shown_toast;
     SDL_Texture *toast_tex;
@@ -205,6 +206,13 @@ void find_valid_controller(vui_sdl_context_t *sdl_ctx)
         sdl_ctx->controller_gyros = c;
     } else {
         sdl_ctx->controller = c;
+    }
+
+    if (!sdl_ctx->controller_gyros && 
+        !(SDL_GameControllerHasSensor(sdl_ctx->controller, SDL_SENSOR_ACCEL) || SDL_GameControllerHasSensor(sdl_ctx->controller, SDL_SENSOR_GYRO))){
+            sdl_ctx->iio_gyros = init_iio_devices();
+            pthread_t iio_thread;
+            pthread_create(&iio_thread, NULL, &iio_thread_loop, &sdl_ctx->iio_gyros);
     }
 }
 
@@ -360,8 +368,6 @@ int vui_sdl_event_thread(void *data)
 {
     vui_context_t *vui = (vui_context_t *) data;
     vui_sdl_context_t *sdl_ctx = (vui_sdl_context_t *) vui->platform_data;
-
-    init_iio_devices();
 
     SDL_Event ev;
     // while (!vui->quit) {
