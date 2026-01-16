@@ -12,5 +12,5 @@ struct IIO_Sensors {
 struct IIO_Sensors init_iio_devices();
 
 void push_sensor_event(SDL_SensorType sensor, float data[3], uint64_t timestamp);
-void push_single_sensor_event(SDL_SensorType sensor, struct iio_device *dev, int modifier);
+void push_single_sensor_event(SDL_SensorType sensor, struct iio_device *dev, float modifier);
 void* iio_thread_loop(void * v_sensors);

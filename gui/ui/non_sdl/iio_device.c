@@ -22,9 +22,13 @@ struct IIO_Sensors init_iio_devices() {
 
 void* iio_thread_loop(void *v_sensors){
 	struct IIO_Sensors *sensors = (struct IIO_Sensors *)v_sensors;
-	push_single_sensor_event(SDL_SENSOR_GYRO, sensors->gyro, 100);
-	push_single_sensor_event(SDL_SENSOR_ACCEL, sensors->accel, 1);
-	sleep(1);
+	int i = 10000;
+	while (i){
+		push_single_sensor_event(SDL_SENSOR_GYRO, sensors->gyro, 0.9);
+		push_single_sensor_event(SDL_SENSOR_ACCEL, sensors->accel, 0.9);
+		//sleep(1);
+		i--;
+	}	
 }
 
 
@@ -45,7 +49,7 @@ void push_sensor_event(SDL_SensorType sensor, float data[3], uint64_t timestamp)
 // switch gyro and accel has 4 channels: 3 data, then timestamp
 // data attributes: raw, scale, scale, scale_available
 // current_timestamp_clock, mount_matrix, sampling_frequency, sampling_frequency_available
-void push_single_sensor_event(SDL_SensorType sensor, struct iio_device *dev, int modifier){
+void push_single_sensor_event(SDL_SensorType sensor, struct iio_device *dev, float modifier){
 	float data[3];
 	struct iio_channel* channel;
 	// data is le:S16/16>>0, so should be enough?
@@ -55,7 +59,10 @@ void push_single_sensor_event(SDL_SensorType sensor, struct iio_device *dev, int
 		channel = iio_device_get_channel(dev, i);
 		iio_channel_attr_read(channel, "raw", value_string, 10);
 		iio_channel_attr_read(channel, "scale", scale_string, 10);
-		data[i] = modifier * strtof(value_string, NULL) * strtof(scale_string, NULL);
+		if (i == 0) data[2] = -1* modifier * strtof(value_string, NULL) * strtof(scale_string, NULL);
+		if (i == 1) data[0] = modifier * strtof(value_string, NULL) * strtof(scale_string, NULL);
+		if (i == 2) data[1] = modifier * strtof(value_string, NULL) * strtof(scale_string, NULL);
+		//data[i] = modifier * strtof(value_string, NULL) * strtof(scale_string, NULL);
 	}
 
 	/**
