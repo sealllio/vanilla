@@ -39,7 +39,6 @@ struct IIO_Sensors init_iio_devices() {
 
 void* iio_thread_loop(void *v_sensors){
 	struct IIO_Sensors *sensors = (struct IIO_Sensors *)v_sensors;
-	#pragma omp parallel for
 	while (true){
 		push_single_sensor_event(SDL_SENSOR_GYRO, sensors->gyro, sensors->modifier.axis, sensors->modifier.scale_g);
 		push_single_sensor_event(SDL_SENSOR_ACCEL, sensors->accel, sensors->modifier.axis, sensors->modifier.scale_a);
