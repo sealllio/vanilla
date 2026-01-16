@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <SDL2/SDL.h>
 #include <unistd.h>
-
+#include <omp.h>
 
 struct IIO_Sensors init_iio_devices() {
 	struct iio_context* iio_ctx = iio_create_default_context();
@@ -17,14 +17,21 @@ struct IIO_Sensors init_iio_devices() {
 	struct IIO_Sensors sensors = {
 		.modifier = {
     		.axis = {2, 0, 1}, 
-    		.scale_g = {-0.9, 0.9, 0.9}, // 0.9 because 1 has issues with wii u calibration 
-    		.scale_a = {-0.9, 0.9, 0.9}
+    		.scale_g = {-0.85, 0.85, 0.85}, // 0.9 because 1 has issues with wii u calibration 
+    		.scale_a = {-0.85, 0.85, 0.85}
 		}
 	};
 
+	// assume scale won't change?
+	char scale_string[10];
 	for (int i = 0; i <3; i++){
 		sensors.gyro[i] = iio_device_get_channel(gyro_d, i);
+		iio_channel_attr_read(sensors.gyro[i], "scale", scale_string, 10);
+		sensors.modifier.scale_g[i] = sensors.modifier.scale_g[i] * strtof(scale_string, NULL);
+
 		sensors.accel[i] = iio_device_get_channel(accel_d, i);
+		iio_channel_attr_read(sensors.accel[i], "scale", scale_string, 10);
+		sensors.modifier.scale_a[i] = sensors.modifier.scale_a[i] * strtof(scale_string, NULL);
 	}
 	
 	return sensors;
@@ -32,15 +39,13 @@ struct IIO_Sensors init_iio_devices() {
 
 void* iio_thread_loop(void *v_sensors){
 	struct IIO_Sensors *sensors = (struct IIO_Sensors *)v_sensors;
-	int i = 10000;
-	while (i){
+	#pragma omp parallel for
+	while (true){
 		push_single_sensor_event(SDL_SENSOR_GYRO, sensors->gyro, sensors->modifier.axis, sensors->modifier.scale_g);
 		push_single_sensor_event(SDL_SENSOR_ACCEL, sensors->accel, sensors->modifier.axis, sensors->modifier.scale_a);
 		//sleep(1);
-		i--;
 	}	
 }
-
 
 void push_sensor_event(SDL_SensorType sensor, float data[3], uint64_t timestamp){
 	SDL_Event event;
@@ -63,13 +68,13 @@ void push_single_sensor_event(SDL_SensorType sensor, struct iio_channel** channe
 	float data[3];
 	struct iio_channel* channel;
 	// data is le:S16/16>>0, so should be enough?
-	char value_string[10];
-	char scale_string[10];
+	
+	#pragma omp parallel for
 	for (int i=0; i<3; i++){
 		channel = channels[i];
+		char value_string[10];
 		iio_channel_attr_read(channel, "raw", value_string, 10);
-		iio_channel_attr_read(channel, "scale", scale_string, 10);
-		data[axis[i]] = modifier[i] * strtof(value_string, NULL) * strtof(scale_string, NULL);
+		data[axis[i]] = modifier[i] * strtof(value_string, NULL);
 	}
 
 	// channel = iio_device_get_channel(dev, 3);
@@ -77,3 +82,4 @@ void push_single_sensor_event(SDL_SensorType sensor, struct iio_channel** channe
 	// iio_channel_attr_read(channel, "I don't understand timestamp", scale_string, 10);
 	push_sensor_event(sensor, data, 0);
 }
+
