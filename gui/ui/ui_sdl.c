@@ -32,6 +32,8 @@
 #include "ui_priv.h"
 #include "ui_util.h"
 
+#include "ui/non_sdl/battery.h"
+
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define PW_CHAR_SIZE 20
 #define PW_CHAR_PAD 2
@@ -687,7 +689,7 @@ int vui_init_sdl(vui_context_t *ctx, int fullscreen)
 
     ctx->text_open_handler = vui_sdl_text_open_handler;
 
-    ctx->power_state_handler = vui_sdl_power_state_handler;
+    ctx->power_state_handler = vui_ps_battery_power_state_handler; //vui_sdl_power_state_handler;
 	sdl_ctx->last_power_state_check = 0;
 	sdl_ctx->last_power_state = VUI_POWERSTATE_UNKNOWN;
 
