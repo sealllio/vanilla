@@ -89,6 +89,8 @@ static int axis_map[SDL_CONTROLLER_AXIS_MAX];
 static int key_map[SDL_NUM_SCANCODES];
 static int vibrate = 0;
 
+
+
 void init_gamepad()
 {
 	vibrate = 0;
@@ -294,6 +296,16 @@ vui_power_state_t vui_sdl_power_state_handler(vui_context_t *ctx, int *percent)
 	}
 
 	return sdl_ctx->last_power_state;
+}
+
+vui_power_state_handler_t choose_power_state_handler(vui_context_t *ctx) {
+    vui_power_state_t test_state = get_linux_device_battery_state();
+    if (test_state == VUI_POWERSTATE_ERROR || test_state == VUI_POWERSTATE_UNKNOWN) {
+        vpilog("Using SDL controller battery\n");
+        return vui_sdl_power_state_handler;
+    }
+    vpilog("Using linux device battery\n");
+    return vui_linux_battery_power_state_handler;
 }
 
 void vui_sdl_fullscreen_enabled_handler(vui_context_t *ctx, int enabled, void *userdata)
@@ -689,7 +701,7 @@ int vui_init_sdl(vui_context_t *ctx, int fullscreen)
 
     ctx->text_open_handler = vui_sdl_text_open_handler;
 
-    ctx->power_state_handler = vui_ps_battery_power_state_handler; //vui_sdl_power_state_handler;
+    ctx->power_state_handler = choose_power_state_handler(ctx);
 	sdl_ctx->last_power_state_check = 0;
 	sdl_ctx->last_power_state = VUI_POWERSTATE_UNKNOWN;
 
