@@ -211,8 +211,7 @@ void find_valid_controller(vui_sdl_context_t *sdl_ctx)
     if (!sdl_ctx->controller_gyros && 
         !(SDL_GameControllerHasSensor(sdl_ctx->controller, SDL_SENSOR_ACCEL) || SDL_GameControllerHasSensor(sdl_ctx->controller, SDL_SENSOR_GYRO))){
             sdl_ctx->iio_gyros = init_iio_devices();
-            pthread_t iio_thread;
-            pthread_create(&iio_thread, NULL, &iio_thread_loop, &sdl_ctx->iio_gyros);
+            start_iio(&sdl_ctx->iio_gyros);
     }
 }
 

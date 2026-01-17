@@ -1,5 +1,4 @@
 #include "iio_device.h"
-#include "platform.h"
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -7,7 +6,8 @@
 #include <stdint.h>
 #include <SDL2/SDL.h>
 #include <unistd.h>
-#include <omp.h>
+#include <pthread.h>
+
 
 struct IIO_Sensors init_iio_devices() {
 	struct iio_context* iio_ctx = iio_create_default_context();
@@ -21,6 +21,7 @@ struct IIO_Sensors init_iio_devices() {
     		.scale_a = {-0.85, 0.85, 0.85}
 		}
 	};
+	
 
 	// assume scale won't change?
 	char scale_string[10];
@@ -68,7 +69,6 @@ void push_single_sensor_event(SDL_SensorType sensor, struct iio_channel** channe
 	struct iio_channel* channel;
 	// data is le:S16/16>>0, so should be enough?
 	
-	#pragma omp parallel for
 	for (int i=0; i<3; i++){
 		channel = channels[i];
 		char value_string[10];
@@ -82,3 +82,7 @@ void push_single_sensor_event(SDL_SensorType sensor, struct iio_channel** channe
 	push_sensor_event(sensor, data, 0);
 }
 
+void start_iio(struct IIO_Sensors* sensors){
+	pthread_t iio_thread;
+    pthread_create(&iio_thread, NULL, &iio_thread_loop, sensors);
+}
